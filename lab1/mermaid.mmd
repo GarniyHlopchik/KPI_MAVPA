@@ -1,0 +1,39 @@
+---
+config:
+  theme: mc
+title: Forum
+---
+erDiagram
+    Account{
+        primary_key-UUID id
+        bool is_moderator
+        string login
+        string password_hash
+        string username
+
+        enum[active,suspended,banned] status
+        Date banned_until
+    }
+    Thread{
+        primary_key-UUID id
+        bool is_active
+        string name
+        string description
+    }
+    Message{
+        primary_key-UUID id
+        enum[registered,verified,not_verified] sender_status
+        string text
+        string username
+        string tripcode
+    }
+    PrivateGroup{
+        primary_key-UUID id
+        string name
+        string description
+    }
+    Account ||--o{ Thread : owns
+    Thread |o--o{ Message : contains
+    Account |o--o{ Message : owns
+    PrivateGroup }o--|{ Account : contains
+    PrivateGroup |o--o{ Message : contains
