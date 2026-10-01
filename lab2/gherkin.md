@@ -118,7 +118,7 @@ Feature: Moderation
   Scenario: SCN17 - ban a user
     Given the user is logged in
     Given the user has moderation rights
-    When the user presses the delete button next to a username of another user
+    When the user presses the ban button next to a username of another user
     And enters the amount of time in a from
     Then the other user should become banned
     And a message about successful ban should appear

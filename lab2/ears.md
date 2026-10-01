@@ -24,7 +24,7 @@ REQ12: WHILE the user is in a thread, the system SHALL display any messages that
 
 REQ13: IF the user is not logged in while in a thread, the system SHALL provide fields for username and tripcode above the message input.
 
-REQ14: IF the user presses Enter while nothing is in the message input box, nothing will happen
+REQ14: IF the user presses Enter while nothing is in the message input box, the system SHALL ignore it.
 
 REQ15: WHEN the user presses Enter while there is text in the message input box, the system SHALL add the message to the thread.
 
