@@ -1,0 +1,48 @@
+sequenceDiagram
+    Actor User
+    participant UI as Client UI
+    participant API as API Gateway
+    participant TS as ThreadService
+    participant DB as Database
+
+    opt user first opens thread list in a session
+
+    User->>UI: requestThreadList()
+    activate UI
+    UI->>API: GET /api/threads/get_all_threads
+    activate API
+    API->>TS: getAllThreads()
+    activate TS
+    TS->>DB: SELECT * FROM threads
+    activate DB
+    DB-->>TS: {thread rows}
+    deactivate DB
+    TS-->>API: Thread Array
+    deactivate TS
+    API-->>UI: 200 OK (ThreadList)
+    deactivate API
+    UI-->>User: sendThreadList(threads)
+    deactivate UI
+
+    end
+
+    User->>UI: requestThreadMessages(thread_id)
+    activate UI
+    UI->>API: GET /api/threads/{id}/messages
+    activate API
+    API->>TS: getThreadMessages(thread_id)
+    activate TS
+    TS->>DB: SELECT * FROM messages WHERE thread_id = thread_id
+    activate DB
+    DB-->>TS: {message rows}
+    deactivate DB
+    TS-->>API: Message Array
+    deactivate TS
+    API-->>UI: 200 OK (MessageList)
+    deactivate API
+
+    loop for each message received
+    UI-->>User: Display Message
+    end
+
+    deactivate UI
