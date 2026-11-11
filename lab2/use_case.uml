@@ -1,0 +1,51 @@
+@startuml
+left to right direction
+skinparam actorStyle awesome
+actor User as user
+actor Anonymous as anon
+actor Moderator as mod
+:anon: --> (UC1: Login)
+:anon: --> (UC2: Register)
+
+:user: --> (UC3: Create Thread)
+:user: --> (UC4: Create Group)
+
+:user: --> (UC5: Send Message)
+:anon: --> (UC5: Send Message)
+(UC6: Send Unregistered Message) --> (UC5: Send Message): Extends
+(UC7: Send Registered Message) --> (UC5: Send Message): Extends
+
+:user: --> (UC7: Send Registered Message) 
+:anon: --> (UC6: Send Unregistered Message)
+
+:anon: --> (UC8: View Thread Messages)
+:user: --> (UC8: View Thread Messages)
+
+:user: --> (UC15: View Group Messages)
+
+:user: --> (UC9: Edit Own Messages)
+:user: --> (UC10: Edit Own Threads)
+:user: --> (UC11: Edit Own Groups)
+
+:user: --> (UC12: View Threads)
+:anon: --> (UC12: View Threads)
+
+:mod: --> (UC13: Edit Messages)
+:mod: --> (UC14: Edit Threads)
+
+(UC9: Edit Own Messages) --> (UC13: Edit Messages): Extends
+(UC10: Edit Own Threads) --> (UC14: Edit Threads): Extends
+
+:mod: --> (UC15: Ban Users)
+
+(UC1: Login) --> (UC2: Register): use
+(UC6: Send Unregistered Message) --> (UC1: Login): use
+(UC12: View Threads) --> (UC3: Create Thread): use
+(UC8: View Thread Messages) --> (UC5: Send Message): use
+(UC15: View Group Messages) --> (UC7: Send Registered Message): use
+(UC9: Edit Own Messages) --> (UC5: Send Message): use
+(UC10: Edit Own Threads) --> (UC3: Create Thread): use
+(UC11: Edit Own Groups) --> (UC4: Create Group): use
+(UC13: Edit Messages) --> (UC5: Send Message): use
+(UC14: Edit Threads) --> (UC3: Create Thread): use
+@enduml

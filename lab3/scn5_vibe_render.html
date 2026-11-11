@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence Diagram Viewer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SVG Pan Zoom -->
+    <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+    <!-- Mermaid.js -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Diagram container pan grid texture */
+        .bg-grid-pattern {
+            background-size: 24px 24px;
+            background-image: 
+                radial-gradient(circle, rgba(156, 163, 175, 0.25) 1px, transparent 1px);
+        }
+        .dark .bg-grid-pattern {
+            background-image: 
+                radial-gradient(circle, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+        }
+        
+        /* Ensure SVG expands inside pan container */
+        #diagram-wrapper svg {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+        }
+
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans h-screen flex flex-col overflow-hidden transition-colors duration-200">
+
+    <!-- Top Header -->
+    <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between z-10 shadow-sm">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-brand-50 dark:bg-gray-700 text-brand-600 dark:text-brand-500 rounded-lg">
+                <i class="fa-solid me-1 fa-diagram-project text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight text-gray-900 dark:text-white">Sequence Diagram Viewer</h1>
+                <p class="text-xs text-gray-500 dark:text-gray-400">Anonymous User Thread Flow</p>
+            </div>
+        </div>
+
+        <!-- Controls Toolbar -->
+        <div class="flex items-center space-x-2">
+            <!-- Theme Selector -->
+            <div class="flex items-center bg-gray-100 dark:bg-gray-700 p-1 rounded-lg border border-gray-200 dark:border-gray-600">
+                <label for="themeSelect" class="text-xs font-semibold px-2 text-gray-600 dark:text-gray-300 hidden sm:inline">Theme:</label>
+                <select id="themeSelect" onchange="changeMermaidTheme(this.value)" class="bg-white dark:bg-gray-800 text-xs font-medium px-2 py-1.5 rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="default">Default</option>
+                    <option value="neutral" selected>Neutral</option>
+                    <option value="dark">Dark</option>
+                    <option value="forest">Forest</option>
+                    <option value="base">Base Minimal</option>
+                </select>
+            </div>
+
+            <div class="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-1"></div>
+
+            <!-- Export Buttons -->
+            <button onclick="exportSVG()" title="Export as SVG" class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-colors">
+                <i class="fa-solid fa-file-code"></i>
+                <span class="hidden md:inline">SVG</span>
+            </button>
+            <button onclick="exportPNG()" title="Export as PNG" class="flex items-center space-x-1 px-2.5 py-1.5 text-xs font-medium rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 transition-colors">
+                <i class="fa-solid fa-file-image"></i>
+                <span class="hidden md:inline">PNG</span>
+            </button>
+
+            <div class="h-6 w-px bg-gray-300 dark:bg-gray-700 mx-1"></div>
+
+            <!-- Dark/Light Mode Toggle -->
+            <button onclick="toggleDarkMode()" title="Toggle Dark Mode" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors">
+                <i id="darkModeIcon" class="fa-solid fa-moon"></i>
+            </button>
+
+            <!-- Refresh Button -->
+            <button onclick="renderDiagram()" title="Reload Diagram" class="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+
+            <!-- Export Code Modal Toggle -->
+            <button onclick="toggleCodeModal()" title="View Mermaid Code" class="flex items-center space-x-1 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-500 hover:bg-brand-600 text-white transition-colors">
+                <i class="fa-solid fa-code"></i>
+                <span class="hidden sm:inline">Source</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 relative flex overflow-hidden">
+        
+        <!-- Interactive Pan/Zoom Canvas Wrapper -->
+        <div id="canvas-container" class="flex-1 bg-grid-pattern relative overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing">
+            
+            <!-- Loading Indicator -->
+            <div id="loader" class="absolute inset-0 flex items-center justify-center bg-white/70 dark:bg-gray-900/70 z-20 transition-opacity duration-300">
+                <div class="flex flex-col items-center space-y-3">
+                    <i class="fa-solid fa-circle-notch fa-spin text-3xl text-brand-500"></i>
+                    <span class="text-sm font-medium text-gray-600 dark:text-gray-300">Rendering Diagram...</span>
+                </div>
+            </div>
+
+            <!-- Diagram Output Container -->
+            <div id="diagram-wrapper" class="w-full h-full flex items-center justify-center p-4">
+                <div id="mermaid-target" class="w-full h-full"></div>
+            </div>
+
+            <!-- Floating Controls Overlay -->
+            <div class="absolute bottom-6 right-6 flex flex-col space-y-2 bg-white dark:bg-gray-800 p-1.5 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-10">
+                <button onclick="zoomIn()" title="Zoom In" class="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg transition-colors">
+                    <i class="fa-solid fa-plus text-sm"></i>
+                </button>
+                <button onclick="zoomOut()" title="Zoom Out" class="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg transition-colors">
+                    <i class="fa-solid fa-minus text-sm"></i>
+                </button>
+                <button onclick="resetZoom()" title="Reset Zoom & Pan" class="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg transition-colors">
+                    <i class="fa-solid fa-compress text-sm"></i>
+                </button>
+            </div>
+
+            <!-- Help Legend / Instructions Overlay -->
+            <div class="absolute top-4 left-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm text-xs text-gray-600 dark:text-gray-300 pointer-events-none hidden md:block">
+                <div class="font-semibold text-gray-800 dark:text-gray-100 mb-1 flex items-center gap-1.5">
+                    <i class="fa-solid fa-hand-pointer text-brand-500"></i> Navigation Controls
+                </div>
+                <ul class="space-y-1">
+                    <li><span class="font-medium">Pan:</span> Click & drag canvas</li>
+                    <li><span class="font-medium">Zoom:</span> Scroll mouse wheel or use controls</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- Source Code Modal -->
+    <div id="codeModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[80vh]">
+            <div class="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                <h3 class="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid fa-code text-brand-500"></i> Mermaid Definition
+                </h3>
+                <button onclick="toggleCodeModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-4 flex-1 overflow-auto bg-gray-900 text-gray-100 font-mono text-xs leading-relaxed">
+                <pre id="codeDisplay"></pre>
+            </div>
+            <div class="px-5 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex justify-end space-x-2">
+                <button onclick="copySourceCode()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white font-medium text-xs rounded-lg transition-colors flex items-center gap-1.5">
+                    <i class="fa-solid fa-copy"></i> Copy Code
+                </button>
+                <button onclick="toggleCodeModal()" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium text-xs rounded-lg transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs px-4 py-2 rounded-lg shadow-xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-2">
+        <i class="fa-solid fa-circle-check text-green-400"></i>
+        <span id="toastMsg">Copied to clipboard!</span>
+    </div>
+
+    <script>
+        // Raw Mermaid Diagram Source
+        const rawDiagramCode = `sequenceDiagram
+
+    Actor Anon as Anonymous User
+    participant UI as Client UI
+    participant API as API Gateway
+    participant AS as Auth Service
+    participant TS as ThreadService
+    participant DB as Database
+
+
+    activate UI
+
+    opt user first opens thread list in a session
+
+    Anon->> UI: 1. requestThreadList()
+    UI->>API: 2. GET /api/threads/get_all_threads
+    activate API
+    API->>TS: 3. getAllThreads()
+    activate TS
+    TS->>DB: 4. SELECT * FROM threads
+    activate DB
+    DB-->>TS: 5. {thread rows}
+    deactivate DB
+    TS-->>API: 6. Thread Array
+    deactivate TS
+    API-->>UI: 7. 200 OK (ThreadList)
+    deactivate API
+    UI-->>Anon: 8. sendThreadList(threads)
+
+    end
+
+    Anon->>UI: 9. requestThreadMessages(thread_id)
+    UI->>API: 10. GET /api/threads/{id}/messages
+    activate API
+    API->>TS: 11. getThreadMessages(thread_id)
+    activate TS
+    TS->>DB: 12. SELECT * FROM messages WHERE thread_id = thread_id
+    activate DB
+    DB-->>TS: 13. {message rows}
+    deactivate DB
+    TS-->>API: 14. Message Array
+    deactivate TS
+    API-->>UI: 15. 200 OK (MessageList)
+    deactivate API
+
+    loop for each message received
+    UI-->>Anon: 16. Display Message
+    end
+
+    UI-->>Anon: 17. Display textbox and send button
+    UI-->>Anon: 18. Disply textboxes for username and tripcode
+
+    deactivate UI`;
+
+        let panZoomInstance = null;
+        let currentTheme = 'neutral';
+
+        // Initialize display code
+        document.getElementById('codeDisplay').textContent = rawDiagramCode;
+
+        // Initialize Mermaid
+        mermaid.initialize({
+            startOnLoad: false,
+            securityLevel: 'loose',
+            sequence: {
+                diagramMarginX: 30,
+                diagramMarginY: 30,
+                actorMargin: 50,
+                width: 150,
+                height: 65,
+                boxMargin: 10,
+                boxTextMargin: 5,
+                noteMargin: 10,
+                messageMargin: 35,
+                mirrorActors: true,
+                useMaxWidth: false
+            }
+        });
+
+        // Render function
+        async function renderDiagram() {
+            const loader = document.getElementById('loader');
+            const target = document.getElementById('mermaid-target');
+            
+            loader.classList.remove('opacity-0');
+            loader.classList.remove('pointer-events-none');
+
+            // Destroy previous panZoom instance if exists
+            if (panZoomInstance) {
+                panZoomInstance.destroy();
+                panZoomInstance = null;
+            }
+
+            target.innerHTML = '';
+
+            try {
+                // Re-initialize mermaid with current theme
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: currentTheme,
+                });
+
+                const id = 'mermaid-svg-' + Date.now();
+                const { svg } = await mermaid.render(id, rawDiagramCode);
+                
+                target.innerHTML = svg;
+
+                // Configure SVG Pan Zoom
+                const svgElement = target.querySelector('svg');
+                if (svgElement) {
+                    // Set SVG responsiveness
+                    svgElement.style.width = '100%';
+                    svgElement.style.height = '100%';
+
+                    panZoomInstance = svgPanZoom(svgElement, {
+                        zoomEnabled: true,
+                        controlIconsEnabled: false,
+                        fit: true,
+                        center: true,
+                        minZoom: 0.3,
+                        maxZoom: 5,
+                        zoomScaleSensitivity: 0.2
+                    });
+
+                    // Handle window resize
+                    window.addEventListener('resize', () => {
+                        if (panZoomInstance) {
+                            panZoomInstance.resize();
+                            panZoomInstance.fit();
+                            panZoomInstance.center();
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Mermaid Rendering Error:', error);
+                target.innerHTML = `<div class="p-4 bg-red-100 text-red-700 rounded-lg font-mono text-sm">Failed to render diagram: ${error.message}</div>`;
+            } finally {
+                setTimeout(() => {
+                    loader.classList.add('opacity-0');
+                    loader.classList.add('pointer-events-none');
+                }, 200);
+            }
+        }
+
+        // Pan & Zoom Handlers
+        function zoomIn() {
+            if (panZoomInstance) panZoomInstance.zoomIn();
+        }
+
+        function zoomOut() {
+            if (panZoomInstance) panZoomInstance.zoomOut();
+        }
+
+        function resetZoom() {
+            if (panZoomInstance) {
+                panZoomInstance.resetZoom();
+                panZoomInstance.resetPan();
+                panZoomInstance.fit();
+                panZoomInstance.center();
+            }
+        }
+
+        // Theme Switcher
+        function changeMermaidTheme(theme) {
+            currentTheme = theme;
+            renderDiagram();
+        }
+
+        // Dark Mode Toggle
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('darkModeIcon');
+            
+            if (isDark) {
+                icon.className = 'fa-solid fa-sun';
+                // Switch to dark mermaid theme if default/neutral was active
+                if (currentTheme === 'neutral' || currentTheme === 'default') {
+                    currentTheme = 'dark';
+                    document.getElementById('themeSelect').value = 'dark';
+                }
+            } else {
+                icon.className = 'fa-solid fa-moon';
+                if (currentTheme === 'dark') {
+                    currentTheme = 'neutral';
+                    document.getElementById('themeSelect').value = 'neutral';
+                }
+            }
+            
+            renderDiagram();
+        }
+
+        // Modal Controls
+        function toggleCodeModal() {
+            const modal = document.getElementById('codeModal');
+            modal.classList.toggle('hidden');
+        }
+
+        // Export Functions
+        function exportSVG() {
+            const svgElement = document.querySelector('#mermaid-target svg');
+            if (!svgElement) return;
+
+            const svgString = new XMLSerializer().serializeToString(svgElement);
+            const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = 'sequence-diagram-anonymous.svg';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(url);
+            showToast('SVG downloaded successfully!');
+        }
+
+        function exportPNG() {
+            const svgElement = document.querySelector('#mermaid-target svg');
+            if (!svgElement) return;
+
+            const svgString = new XMLSerializer().serializeToString(svgElement);
+            const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+            const URLObj = window.URL || window.webkitURL || window;
+            const blobURL = URLObj.createObjectURL(svgBlob);
+
+            const image = new Image();
+            image.onload = () => {
+                const canvas = document.createElement('canvas');
+                const bbox = svgElement.getBoundingClientRect();
+                
+                // Add scale factor for higher quality export
+                const scale = 2;
+                canvas.width = (bbox.width || 1000) * scale;
+                canvas.height = (bbox.height || 800) * scale;
+
+                const context = canvas.getContext('2d');
+                context.scale(scale, scale);
+
+                // Fill background
+                context.fillStyle = document.documentElement.classList.contains('dark') ? '#111827' : '#ffffff';
+                context.fillRect(0, 0, canvas.width, canvas.height);
+
+                context.drawImage(image, 0, 0);
+
+                const pngURL = canvas.toDataURL('image/png');
+                const downloadLink = document.createElement('a');
+                downloadLink.href = pngURL;
+                downloadLink.download = 'sequence-diagram-anonymous.png';
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+                URLObj.revokeObjectURL(blobURL);
+                showToast('PNG downloaded successfully!');
+            };
+
+            image.src = blobURL;
+        }
+
+        // Copy Code Helper
+        function copySourceCode() {
+            const textArea = document.createElement('textarea');
+            textArea.value = rawDiagramCode;
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                showToast('Diagram code copied to clipboard!');
+            } catch (err) {
+                showToast('Failed to copy code.');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            toast.classList.remove('opacity-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+            }, 2500);
+        }
+
+        // Render on Window Load
+        window.onload = function() {
+            renderDiagram();
+        };
+    </script>
+</body>
+</html>

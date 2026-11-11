@@ -1,0 +1,50 @@
+sequenceDiagram
+
+    Actor User as User
+    participant UI as Client UI
+    participant API as API Gateway
+    participant TS as ThreadService
+    participant DB as Database
+
+
+    activate UI
+
+    opt user first opens thread list in a session
+
+    User->> UI: 1. requestThreadList()
+    UI->>API: 2. GET /api/threads/get_all_threads
+    activate API
+    API->>TS: 3. getAllThreads()
+    activate TS
+    TS->>DB: 4. SELECT * FROM threads
+    activate DB
+    DB-->>TS: 5. {thread rows}
+    deactivate DB
+    TS-->>API: 6. Thread Array
+    deactivate TS
+    API-->>UI: 7. 200 OK (ThreadList)
+    deactivate API
+    UI-->>User: 8. sendThreadList(threads)
+
+    end
+
+    User->>UI: 9. requestThreadMessages(invalid_id)
+    UI->>API: 10. GET /api/threads/{invalid_id}/messages
+    activate API
+    API->>TS: 11. getThreadMessages(invalid_id)
+    activate TS
+    TS->>DB: 12. SELECT * FROM messages WHERE thread_id = invalid_id
+    activate DB
+    DB-->>TS: 13. {empty response}
+    deactivate DB
+    alt thread found
+        TS-->>API: 14. 200 OK (threadData)
+        API-->>UI: 15. 200 OK (threadData)
+        UI-->>User: 16. displayThread()
+    else thread is null / deleted
+        TS-->>API: 17.404 Thread Not Found
+        API-->>UI: 18.404 Not Found (Error payload)
+        UI-->>User: 19. showError("Thread not found") & redirectToList()
+    end
+
+    deactivate UI
