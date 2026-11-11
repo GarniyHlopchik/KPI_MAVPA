@@ -1,14 +1,31 @@
 sequenceDiagram
-    Actor User
+
+    Actor User as Registered User
     participant UI as Client UI
     participant API as API Gateway
+    participant AS as Auth Service
     participant TS as ThreadService
     participant DB as Database
+
+    activate UI
+
+    opt user needs new access token
+
+    UI->>API: GET /api/users/refresh_tok/{refreshTok}
+    activate API
+    API->>AS: getAccessToken(refresh_token)
+    activate AS
+    AS-->>API: AccessToken
+    deactivate AS
+    API-->>UI: 200 OK (AccessToken)
+    deactivate API
+
+
+    end
 
     opt user first opens thread list in a session
 
     User->>UI: requestThreadList()
-    activate UI
     UI->>API: GET /api/threads/get_all_threads
     activate API
     API->>TS: getAllThreads()
@@ -22,12 +39,10 @@ sequenceDiagram
     API-->>UI: 200 OK (ThreadList)
     deactivate API
     UI-->>User: sendThreadList(threads)
-    deactivate UI
 
     end
 
     User->>UI: requestThreadMessages(thread_id)
-    activate UI
     UI->>API: GET /api/threads/{id}/messages
     activate API
     API->>TS: getThreadMessages(thread_id)

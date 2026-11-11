@@ -34,6 +34,5 @@ Unregistere User
 User UI
 API Gateway
 ThreadService
-ThreadRepository
-MessageRepository
+AuthService
 PostgreSQL Database
