@@ -43,9 +43,9 @@ sequenceDiagram
     API-->>UI: 15. 200 OK (MessageList)
     deactivate API
 
-    loop for each message received
-    UI-->>Anon: 16. Display Message
-    end
+
+    UI-->>Anon: 16. Display all Messages
+
 
     UI-->>Anon: 17. Display textbox and send button
     UI-->>Anon: 18. Disply textboxes for username and tripcode

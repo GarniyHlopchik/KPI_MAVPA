@@ -9,6 +9,12 @@ sequenceDiagram
 
     activate UI
 
+
+
+    opt user first opens thread list in a session
+
+    User->>UI: 5. requestThreadList()
+
     opt user needs new access token
 
     UI->>API: 1. GET /api/users/refresh_tok/{refreshTok}
@@ -23,9 +29,6 @@ sequenceDiagram
 
     end
 
-    opt user first opens thread list in a session
-
-    User->>UI: 5. requestThreadList()
     UI->>API: 6. GET /api/threads/get_all_threads
     activate API
     API->>TS: 7. getAllThreads()
@@ -56,8 +59,8 @@ sequenceDiagram
     API-->>UI: 19. 200 OK (MessageList)
     deactivate API
 
-    loop for each message received
-    UI-->>User: 20. Display Message
-    end
+
+    UI-->>User: 20. Display All Messages
+
 
     deactivate UI
