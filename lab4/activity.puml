@@ -1,0 +1,42 @@
+@startuml
+|User|
+start
+:Click on thread in list;
+
+|Frontend (UI)|
+:Send GET /threads/{id}; <<sendSignal>>
+:Show loading spinner;
+
+|Backend API|
+:Receive request; <<acceptEvent>>
+:Query thread & messages from DB;
+
+|Frontend (UI)|
+if (Response received within 5s?) then (no [Timeout > 5s])
+  :Receive timeout event (5s); <<timeEvent>>
+  :Hide spinner;
+  :Show "Server timeout" error;
+  stop
+else (yes [Response received])
+  :Receive thread response; <<acceptEvent>>
+  :Hide spinner;
+  if (HTTP Status?) then (404 Not Found)
+    :Show "Thread no longer exists" error;
+    :Redirect to updated threads list;
+    stop
+  else (200 OK)
+    fork
+      :Render thread messages;
+    fork again
+      if (User logged in?) then (yes)
+        :Render message input;
+      else (no)
+        :Render username, tripcode & message inputs;
+      endif
+    end fork
+    |User|
+    :View thread & interact;
+    stop
+  endif
+endif
+@enduml
