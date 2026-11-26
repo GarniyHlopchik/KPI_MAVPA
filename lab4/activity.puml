@@ -1,6 +1,7 @@
 @startuml
 |User|
 start
+:Thread list received; <<acceptEvent>>
 :Click on thread in list;
 
 |Frontend (UI)|
